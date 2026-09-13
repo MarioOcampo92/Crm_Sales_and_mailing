@@ -41,28 +41,28 @@ serve(async (req) => {
     if (subErr) throw new Error('Error fetching subscribers')
     if (!subscribers || subscribers.length === 0) throw new Error('No active subscribers')
 
-    // 3. Send via Resend (Batched up to 50 recipients per request for free tier, but here we simplify)
-    // Note: Resend standard API allows up to 50 'to' recipients in a single call. 
-    // If you have more, you must batch them.
+    // 3. Send via Resend Batch API
+    // Resend allows up to 100 emails per batch request
     const emails = subscribers.map(s => s.email)
+    const chunkSize = 100;
     
-    // Batching in chunks of 50
-    const chunkSize = 50;
     for (let i = 0; i < emails.length; i += chunkSize) {
       const chunk = emails.slice(i, i + chunkSize);
-      const res = await fetch('https://api.resend.com/emails', {
+      
+      const batchPayload = chunk.map(email => ({
+        from: 'Vestra CRM <boletin@vestrasolutions.org>',
+        to: email,
+        subject: campaign.asunto,
+        html: campaign.cuerpo_html
+      }));
+
+      const res = await fetch('https://api.resend.com/emails/batch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${RESEND_API_KEY}`
         },
-        body: JSON.stringify({
-          from: 'onboarding@resend.dev', // Cambiar por tu dominio verificado cuando pases a producción
-          to: ['onboarding@resend.dev'], // Resend requires a 'to' address.
-          bcc: chunk, // Using bcc to hide other recipients
-          subject: campaign.asunto,
-          html: campaign.cuerpo_html
-        })
+        body: JSON.stringify(batchPayload)
       })
 
       if (!res.ok) {
