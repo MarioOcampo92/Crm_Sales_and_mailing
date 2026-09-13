@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Users, Mail as MailIcon, Plus, Loader2, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
+import NewSubscriberModal from '../components/kanban/NewSubscriberModal';
 
 export default function MailingPage() {
   const [activeTab, setActiveTab] = useState('subscribers'); // 'subscribers' | 'campaigns'
   const [subscribers, setSubscribers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
 
   // Campaigns state
   const [asunto, setAsunto] = useState('');
@@ -63,27 +65,7 @@ export default function MailingPage() {
     }
   }
 
-  async function handleAddSubscriber(e) {
-    e.preventDefault();
-    const email = prompt('Introduce el correo del suscriptor:');
-    if (!email) return;
-    const nombre = prompt('Introduce el nombre del suscriptor (opcional):');
-    
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('subscribers')
-      .insert([{ email, nombre, source: 'Añadido Manualmente', status: 'activo' }])
-      .select()
-      .single();
-      
-    if (error) {
-      toast.error('Error al añadir suscriptor: ' + error.message);
-    } else {
-      toast.success('¡Suscriptor añadido!');
-      setSubscribers([data, ...subscribers]);
-    }
-    setLoading(false);
-  }
+  
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto flex flex-col h-full">
@@ -94,7 +76,7 @@ export default function MailingPage() {
         </div>
         {activeTab === 'subscribers' && (
           <button
-            onClick={handleAddSubscriber}
+            onClick={() => setShowModal(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
           >
             <Plus size={16} /> Añadir Suscriptor
@@ -223,6 +205,13 @@ export default function MailingPage() {
           </div>
         )}
       </div>
+
+      {showModal && (
+        <NewSubscriberModal 
+          onClose={() => setShowModal(false)} 
+          onAdd={(newSub) => setSubscribers([newSub, ...subscribers])} 
+        />
+      )}
     </div>
   );
 }
