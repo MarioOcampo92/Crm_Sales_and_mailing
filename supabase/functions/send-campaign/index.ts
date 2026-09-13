@@ -57,8 +57,8 @@ serve(async (req) => {
           'Authorization': `Bearer ${RESEND_API_KEY}`
         },
         body: JSON.stringify({
-          from: 'Vestra CRM <boletin@ventas.vestrasolutions.org>', // REEMPLAZAR POR DOMINIO VERIFICADO EN RESEND
-          to: [],
+          from: 'onboarding@resend.dev', // Cambiar por tu dominio verificado cuando pases a producción
+          to: ['onboarding@resend.dev'], // Resend requires a 'to' address.
           bcc: chunk, // Using bcc to hide other recipients
           subject: campaign.asunto,
           html: campaign.cuerpo_html

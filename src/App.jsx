@@ -8,6 +8,7 @@ import ImportPage from './pages/ImportPage';
 import DirectorioPage from './pages/DirectorioPage';
 import MailingPage from './pages/MailingPage';
 import { Loader2 } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 
 function ProtectedApp() {
   const { session, loading } = useAuth();
@@ -43,6 +44,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <Toaster position="top-right" />
         <ProtectedApp />
       </BrowserRouter>
     </AuthProvider>

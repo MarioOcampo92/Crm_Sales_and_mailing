@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Users, Mail as MailIcon, Plus, Loader2, Send } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function MailingPage() {
   const [activeTab, setActiveTab] = useState('subscribers'); // 'subscribers' | 'campaigns'
@@ -31,7 +32,7 @@ export default function MailingPage() {
 
   async function handleSendCampaign(e) {
     e.preventDefault();
-    if (!asunto || !cuerpo) return alert('Por favor, rellena asunto y cuerpo');
+    if (!asunto || !cuerpo) return toast.error('Por favor, rellena asunto y cuerpo');
     
     setIsSending(true);
     try {
@@ -51,22 +52,54 @@ export default function MailingPage() {
 
       if (fnError) throw fnError;
 
-      alert('¡Campaña enviada con éxito!');
+      toast.success('¡Campaña enviada con éxito!');
       setAsunto('');
       setCuerpo('');
     } catch (err) {
       console.error(err);
-      alert('Hubo un error al enviar la campaña: ' + err.message);
+      toast.error('Hubo un error al enviar la campaña: ' + err.message);
     } finally {
       setIsSending(false);
     }
   }
 
+  async function handleAddSubscriber(e) {
+    e.preventDefault();
+    const email = prompt('Introduce el correo del suscriptor:');
+    if (!email) return;
+    const nombre = prompt('Introduce el nombre del suscriptor (opcional):');
+    
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('subscribers')
+      .insert([{ email, nombre, source: 'Añadido Manualmente', status: 'activo' }])
+      .select()
+      .single();
+      
+    if (error) {
+      toast.error('Error al añadir suscriptor: ' + error.message);
+    } else {
+      toast.success('¡Suscriptor añadido!');
+      setSubscribers([data, ...subscribers]);
+    }
+    setLoading(false);
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto flex flex-col h-full">
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Mailing & Newsletter</h1>
-        <p className="text-sm text-gray-500">Gestiona tus suscriptores y envía correos masivos.</p>
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Mailing & Newsletter</h1>
+          <p className="text-sm text-gray-500">Gestiona tus suscriptores y envía correos masivos.</p>
+        </div>
+        {activeTab === 'subscribers' && (
+          <button
+            onClick={handleAddSubscriber}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+          >
+            <Plus size={16} /> Añadir Suscriptor
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
