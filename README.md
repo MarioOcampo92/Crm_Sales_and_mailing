@@ -1,102 +1,83 @@
-# Vestra CRM 🚀
+# Vestra CRM - Módulo de Gestión y Suscripciones
 
-Un Customer Relationship Management (CRM) ligero, rápido y moderno construido con **React, Vite, Tailwind CSS y Supabase**. Diseñado específicamente para optimizar la gestión de ventas, el seguimiento de clientes y el envío masivo de correos (Mailing/Newsletter).
+Desarrollado por **Vestra Solutions LLC**.
+
+## Descripción General
+Vestra CRM es un sistema centralizado diseñado para la gestión de clientes, leads (pipeline de ventas) y un potente motor de suscripciones recurrentes. El sistema automatiza la facturación y seguimiento tanto de pagos manuales como de cobros automáticos sincronizados en tiempo real con Stripe.
 
 ---
 
-## ✨ Características Principales
+## 🗺️ Mapa Conceptual de Funcionamiento
 
-- **Tablero Kanban Interactivo**: Gestiona tus leads arrastrando y soltando tarjetas entre diferentes fases del embudo de ventas (Nuevo, Contactado, Demo, Ganado, Perdido).
-- **Directorio Completo**: Vista de tabla estructurada para consultar todos tus clientes, con filtros potentes por nicho, oportunidad y estado.
-- **Mailing y Newsletter Integrado**: 
-  - Gestión de suscriptores independiente.
-  - Creación y envío masivo de campañas usando **Resend** (vía Supabase Edge Functions).
-  - Incluye un Widget HTML/JS embebible para capturar leads desde cualquier web externa.
-- **Sincronización en Tiempo Real**: Desarrollado con Supabase Realtime, los cambios realizados por un usuario se reflejan instantáneamente en los dispositivos de todo el equipo.
-- **Gestión de Asignaciones**: Asigna leads a diferentes vendedores (como John, Mario, etc.) y recibe notificaciones por correo de manera automática.
-- **Interfaz Móvil (PWA)**: Diseño `mobile-first` con una barra de navegación inferior nativa para facilitar el uso en pantallas pequeñas.
-- **Seguridad**: Autenticación manejada por Supabase Auth con políticas RLS (Row Level Security) que aseguran que solo usuarios autenticados puedan leer o editar información.
+```text
++---------------------+       +------------------------+       +-------------------------+
+|   CLIENTE (PAGA)    |       |       STRIPE           |       |      VESTRA CRM         |
+|                     | ----> | (Procesa tarjeta,      | ----> | (Dashboard, Pipelines,  |
+| 1. Automático (Web) |       |  emite factura,        |       |  Suscripciones)         |
+| 2. Manual (SEO/Mto) |       |  gestiona reintentos)  |       |                         |
++---------------------+       +------------------------+       +-------------------------+
+                                        |                               ^
+                                        | Webhooks (Edge Functions)     |
+                                        v                               |
+                              +------------------------+                |
+                              | SUPABASE (Backend)     |                |
+                              | - Base de Datos SQL    |                |
+                              | - Edge Functions (API) |----------------+
+                              | - Autenticación        |
+                              +------------------------+
+```
+
+### Flujo de Datos
+1. **Cobros Automáticos (Stripe):** Cuando un cliente paga o se renueva su suscripción en Stripe, Stripe dispara un Webhook. Este webhook es recibido por nuestras Edge Functions en Supabase, procesado, y el estado del cliente se actualiza automáticamente en el CRM (estado, monto, ciclo, fecha de próximo cobro, teléfono).
+2. **Cobros Manuales:** Gestionados directamente en la interfaz del CRM. El administrador programa la fecha y ciclo. El sistema calcula inteligentemente las proyecciones y levanta alertas visuales cuando un pago está vencido.
+
+---
+
+## ✨ Funcionalidades Principales
+
+### 1. Panel de Suscripciones Híbrido
+- **Sincronización Stripe:** Lectura en tiempo real de clientes automáticos. Evita duplicidad y sobrescritura.
+- **Cobros Manuales:** Gestión de servicios que se cobran por transferencia o métodos externos (Mantenimientos SEO, etc.).
+- **Ciclos Dinámicos:** Soporte para suscripciones Mensuales, 4 Meses (Cuatrimestrales), 6 Meses (Semestrales) y Anuales.
+
+### 2. Motor de Proyecciones (Forecasting)
+- **Stripe (Mes):** Cálculo del MRR (Monthly Recurring Revenue) normalizado de suscripciones automáticas.
+- **Estimado Manual:** Cálculo del ARR (Anual) de todos los cobros manuales.
+- **Calendario Desplegable:** Sistema dinámico que agrupa los próximos cobros manuales por mes/año, listando los clientes exactos que deben ser contactados y el monto estimado en juego.
+
+### 3. Alertas y Automatización
+- **Filtro de Atención (⚠️):** Muestra de inmediato clientes de Stripe cuyo cobro falló (Impago/Cancelado) y clientes manuales cuya fecha de pago ya expiró.
+- **Renovación a Un Clic:** Botón de confirmación rápida que suma automáticamente el ciclo correspondiente a la fecha de cobro de clientes manuales.
+- **Historial de Facturas:** Integración directa con la API de Stripe para descargar las últimas facturas pagadas en PDF sin salir del CRM.
+
+### 4. Pipeline de Ventas (Kanban)
+- Gestión de leads por etapas (Contacto, Negociación, Cierre).
+- Notas, recordatorios y trazabilidad comercial.
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
-- **Frontend**: [React 18](https://react.dev/) + [Vite](https://vitejs.dev/)
-- **Estilos**: [Tailwind CSS v4](https://tailwindcss.com/)
-- **Iconos**: [Lucide React](https://lucide.dev/)
-- **Drag & Drop**: `@hello-pangea/dnd`
-- **Backend & Base de Datos**: [Supabase](https://supabase.com/) (PostgreSQL + Auth + Edge Functions)
-- **Motor de Correos (Mailing)**: [Resend](https://resend.com/)
+**Frontend (Interfaz de Usuario)**
+- React.js + Vite
+- Tailwind CSS (Estilos y Diseño UI/UX)
+- Lucide React (Iconografía)
+- React Hot Toast (Notificaciones)
+
+**Backend & Base de Datos**
+- Supabase (PostgreSQL)
+- Supabase Edge Functions (Deno / TypeScript) para Webhooks e integración API.
+
+**Integraciones de Terceros**
+- Stripe API (Billing, Subscriptions, Invoices, Webhooks).
+- Hostinger (Despliegue y Hosting del Frontend).
 
 ---
 
-## 📂 Estructura del Proyecto
-
-```text
-/src
- ├── components/       # Componentes reutilizables (Kanban, NavBars, Modales)
- ├── context/          # Contextos de React (AuthContext)
- ├── data/             # Datos mockeados y configuración (vendedores.js)
- ├── hooks/            # Custom hooks (useLeads) para manejar la lógica de negocio
- ├── lib/              # Configuración de librerías externas (Supabase, EmailJS)
- ├── pages/            # Vistas principales (Dashboard, Kanban, Directorio, Mailing)
- └── App.jsx           # Enrutamiento (React Router) y Auth Provider
-/supabase
- └── functions/        # Supabase Edge Functions (ej. send-campaign)
-```
+## 🔒 Seguridad y Buenas Prácticas
+- Las claves privadas de Stripe (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) residen cifradas exclusivamente en los *Secrets* del servidor de Supabase.
+- Configuración de exclusiones de Git (`.gitignore`) para credenciales de despliegue (`_deploy.js`) y variables de entorno (`.env`).
+- Restricción de edición de registros automáticos en frontend para mantener a Stripe como *Single Source of Truth*.
 
 ---
-
-## 🚀 Instalación y Desarrollo Local
-
-1. **Clonar el repositorio**:
-   ```bash
-   git clone https://github.com/tu-usuario/vestra-crm.git
-   cd vestra-crm
-   ```
-
-2. **Instalar dependencias**:
-   ```bash
-   npm install
-   ```
-
-3. **Configurar variables de entorno**:
-   Crea un archivo `.env` en la raíz del proyecto y añade tus claves de Supabase:
-   ```env
-   VITE_SUPABASE_URL=tu_supabase_url
-   VITE_SUPABASE_ANON_KEY=tu_supabase_anon_key
-   ```
-
-4. **Ejecutar en entorno de desarrollo**:
-   ```bash
-   npm run dev
-   ```
-   Abre [http://localhost:5173](http://localhost:5173) en tu navegador.
-
-5. **Construir para producción**:
-   ```bash
-   npm run build
-   ```
-
----
-
-## ☁️ Despliegue (Edge Functions)
-
-Para que el envío de correos masivos funcione, necesitas hacer deploy de la Edge Function en Supabase:
-
-1. Asegúrate de tener el [Supabase CLI](https://supabase.com/docs/guides/cli) instalado.
-2. Haz login en tu proyecto: `supabase login`
-3. Despliega la función: 
-   ```bash
-   supabase functions deploy send-campaign
-   ```
-4. Configura tu API Key de Resend en los secretos de Supabase:
-   ```bash
-   supabase secrets set RESEND_API_KEY="re_tu_api_key_aqui"
-   ```
-
----
-
-## 📝 Licencia
-
-Propietario: **Vestra Solutions** - Todos los derechos reservados.
+*© 2026 Vestra Solutions LLC. Todos los derechos reservados.*

@@ -7,6 +7,7 @@ import KanbanPage from './pages/KanbanPage';
 import ImportPage from './pages/ImportPage';
 import DirectorioPage from './pages/DirectorioPage';
 import MailingPage from './pages/MailingPage';
+import SubscriptionsPage from './pages/SubscriptionsPage';
 import { Loader2 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 
@@ -33,6 +34,7 @@ function ProtectedApp() {
         <Route path="/kanban"  element={<KanbanPage />} />
         <Route path="/leads"   element={<DirectorioPage />} />
         <Route path="/mailing" element={<MailingPage />} />
+        <Route path="/subscriptions" element={<SubscriptionsPage />} />
         <Route path="/import"  element={<ImportPage />} />
         <Route path="*"        element={<Navigate to="/" replace />} />
       </Routes>

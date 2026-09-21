@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Columns3, Users, FileUp, LogOut, X, Mail } from 'lucide-react';
+import { LayoutDashboard, Columns3, Users, FileUp, LogOut, X, Mail, CreditCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+
 
 const NAV_ITEMS = [
   { to: '/',       label: 'Dashboard',  icon: LayoutDashboard },
   { to: '/kanban', label: 'Pipeline',   icon: Columns3 },
   { to: '/leads',  label: 'Directorio', icon: Users },
   { to: '/mailing',label: 'Mailing',    icon: Mail },
+  { to: '/subscriptions', label: 'Suscripciones', icon: CreditCard },
   { to: '/import', label: 'Importar',   icon: FileUp },
 ];
 
@@ -21,7 +23,7 @@ export default function Layout({ children }) {
       <aside className="hidden lg:flex w-60 bg-white border-r border-gray-200 flex-col flex-shrink-0">
         {/* Logo */}
         <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-          <img src="/logo.png" alt="Vestra" className="w-9 h-9 rounded-xl object-cover flex-shrink-0" />
+          <img src="/vestra-logo-mail.png" alt="Vestra" className="w-9 h-9 rounded-xl object-cover flex-shrink-0" />
           <div className="leading-tight">
             <span className="text-base font-black tracking-tight text-gray-900">Vestra</span>
             <span className="text-base font-medium text-gray-400 ml-1">CRM</span>
@@ -70,7 +72,7 @@ export default function Layout({ children }) {
         {/* MOBILE: mini top bar (solo logo + logout) */}
         <header className="lg:hidden flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-100 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Vestra" className="w-7 h-7 rounded-lg" />
+            <img src="/vestra-logo-mail.png" alt="Vestra" className="w-7 h-7 rounded-lg" />
             <span className="font-bold text-gray-900 text-sm">
               Vestra <span className="text-gray-400 font-medium">CRM</span>
             </span>

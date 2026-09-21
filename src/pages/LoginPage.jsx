@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Loader2, Lock, Mail } from 'lucide-react';
 
+
 export default function LoginPage() {
   const { signIn } = useAuth();
   const [email, setEmail]       = useState('');
@@ -24,9 +25,9 @@ export default function LoginPage() {
 
         {/* Logo + título */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo.png" alt="Vestra" className="w-16 h-16 rounded-2xl mb-4" />
-          <h1 className="text-2xl font-black text-gray-900">
-            Vestra <span className="text-gray-400 font-medium">CRM</span>
+          <img src="/vestra-logo-mail.png" alt="Vestra" className="w-16 h-16 rounded-2xl mb-4" />
+          <h1 className="text-3xl font-bold text-gray-900">
+            Vestra <span className="text-indigo-400 font-medium">CRM</span>
           </h1>
           <p className="text-sm text-gray-500 mt-1">Accede a tu panel de ventas</p>
         </div>
