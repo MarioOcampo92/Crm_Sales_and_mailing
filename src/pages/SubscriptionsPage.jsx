@@ -196,7 +196,7 @@ export default function SubscriptionsPage() {
       matchesSource = true;
     }
     else if (sourceFilter === 'attention') {
-      matchesSource = (sub.status === 'past_due' || sub.status === 'unpaid' || sub.status === 'canceled' || isExpiredManual);
+      matchesSource = (sub.status === 'past_due' || sub.status === 'unpaid' || sub.status === 'canceled' || isExpiredManual || sub.cancel_at_period_end);
     }
     else {
       matchesSource = sub.source === sourceFilter;
@@ -218,8 +218,8 @@ export default function SubscriptionsPage() {
   }).sort((a, b) => new Date(a.next_billing_date) - new Date(b.next_billing_date));
 
   // KPIs y Proyecciones separadas
-  const activeSubs = subscriptions.filter(s => s.status === 'active').length;
-  const pastDueSubs = subscriptions.filter(s => s.status === 'past_due' || s.status === 'canceled').length;
+  const activeSubs = subscriptions.filter(s => s.status === 'active' && !s.cancel_at_period_end).length;
+  const pastDueSubs = subscriptions.filter(s => s.status === 'past_due' || s.status === 'canceled' || s.cancel_at_period_end).length;
   
   const stripeSubs = subscriptions.filter(s => s.source === 'stripe' && s.status === 'active');
   const manualSubs = subscriptions.filter(s => s.source !== 'stripe' && s.status === 'active');
@@ -434,7 +434,7 @@ export default function SubscriptionsPage() {
                     </td>
                     <td className="px-4 py-3"><CycleBadge cycle={sub.billing_cycle} /></td>
                     <td className="px-4 py-3"><SourceBadge source={sub.source} /></td>
-                    <td className="px-4 py-3"><StatusBadge status={sub.status} source={sub.source} nextDate={sub.next_billing_date} /></td>
+                    <td className="px-4 py-3"><StatusBadge status={sub.status} source={sub.source} nextDate={sub.next_billing_date} cancel_at_period_end={sub.cancel_at_period_end} /></td>
                     <td className="px-4 py-3 text-gray-500 font-medium">
                       {sub.next_billing_date 
                         ? new Date(sub.next_billing_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -646,11 +646,15 @@ export default function SubscriptionsPage() {
   );
 }
 
-function StatusBadge({ status, source, nextDate }) {
+function StatusBadge({ status, source, nextDate, cancel_at_period_end }) {
   const isExpiredManual = source !== 'stripe' && status === 'active' && nextDate && new Date(nextDate) < new Date(new Date().setHours(0,0,0,0));
   
   if (isExpiredManual) {
     return <span className="px-2 py-1 rounded-full text-[11px] uppercase tracking-wide font-bold bg-rose-50 text-rose-700 border border-rose-200">Vencida</span>;
+  }
+
+  if (cancel_at_period_end) {
+    return <span className="px-2 py-1 rounded-full text-[11px] uppercase tracking-wide font-bold bg-amber-50 text-amber-700 border border-amber-200" title="Se cancelará al término del período">Va a cancelar</span>;
   }
 
   const config = {

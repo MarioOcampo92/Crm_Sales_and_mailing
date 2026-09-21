@@ -38,13 +38,14 @@ serve(async (req) => {
       const billing_cycle = interval === 'year' ? 'annual' : 'monthly';
       
       const next_billing_date = new Date(sub.current_period_end * 1000).toISOString();
+      const cancel_at_period_end = sub.cancel_at_period_end || false;
 
       const { data: existingSub } = await supabaseAdmin.from('subscriptions').select('id').eq('client_email', customer.email).maybeSingle();
 
       if (existingSub) {
-        await supabaseAdmin.from('subscriptions').update({ plan_name, amount, next_billing_date, status: 'active', source: 'stripe', billing_cycle, client_phone }).eq('id', existingSub.id);
+        await supabaseAdmin.from('subscriptions').update({ plan_name, amount, next_billing_date, status: 'active', source: 'stripe', billing_cycle, client_phone, cancel_at_period_end }).eq('id', existingSub.id);
       } else {
-        await supabaseAdmin.from('subscriptions').insert({ client_name: customer.name || 'Cliente', client_email: customer.email, client_phone, plan_name, amount, next_billing_date, status: 'active', source: 'stripe', billing_cycle });
+        await supabaseAdmin.from('subscriptions').insert({ client_name: customer.name || 'Cliente', client_email: customer.email, client_phone, plan_name, amount, next_billing_date, status: 'active', source: 'stripe', billing_cycle, cancel_at_period_end });
       }
       count++;
     }

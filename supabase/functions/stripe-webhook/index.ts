@@ -80,8 +80,10 @@ serve(async (req) => {
         } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
           status = 'canceled';
         }
+        
+        const cancel_at_period_end = subscription.cancel_at_period_end || false;
 
-        console.log('[stripe-webhook] Upserting:', { client_email, client_name, plan_name, amount, status })
+        console.log('[stripe-webhook] Upserting:', { client_email, client_name, plan_name, amount, status, cancel_at_period_end })
 
         const { data: existingSub } = await supabaseAdmin
           .from('subscriptions')
@@ -92,12 +94,12 @@ serve(async (req) => {
         if (existingSub) {
           await supabaseAdmin
             .from('subscriptions')
-            .update({ plan_name, amount, next_billing_date, status, source: 'stripe', billing_cycle, client_phone })
+            .update({ plan_name, amount, next_billing_date, status, source: 'stripe', billing_cycle, client_phone, cancel_at_period_end })
             .eq('id', existingSub.id);
         } else {
           await supabaseAdmin
             .from('subscriptions')
-            .insert({ client_name, client_email, client_phone, plan_name, amount, next_billing_date, status, source: 'stripe', billing_cycle });
+            .insert({ client_name, client_email, client_phone, plan_name, amount, next_billing_date, status, source: 'stripe', billing_cycle, cancel_at_period_end });
         }
       }
     }
