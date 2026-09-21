@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, AlertCircle, TrendingUp, Search, Loader2, CheckCircle2, Plus, X, Calendar, Zap, Edit, Paperclip, ExternalLink, Download, ChevronDown } from 'lucide-react';
+import { CreditCard, AlertCircle, TrendingUp, Search, Loader2, CheckCircle2, Plus, X, Calendar, Zap, Edit, Paperclip, ExternalLink, Download, ChevronDown, UserMinus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -196,7 +196,10 @@ export default function SubscriptionsPage() {
       matchesSource = true;
     }
     else if (sourceFilter === 'attention') {
-      matchesSource = (sub.status === 'past_due' || sub.status === 'unpaid' || sub.status === 'canceled' || isExpiredManual || sub.cancel_at_period_end);
+      matchesSource = (sub.status === 'past_due' || sub.status === 'unpaid' || sub.status === 'canceled' || isExpiredManual);
+    }
+    else if (sourceFilter === 'early_cancel') {
+      matchesSource = sub.cancel_at_period_end === true;
     }
     else {
       matchesSource = sub.source === sourceFilter;
@@ -373,11 +376,12 @@ export default function SubscriptionsPage() {
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 justify-between items-center bg-gray-50/30">
           
-          <div className="flex bg-gray-100 p-1 rounded-lg w-full sm:w-auto">
-            <button onClick={() => setSourceFilter('all')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'all' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Todos</button>
-            <button onClick={() => setSourceFilter('stripe')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'stripe' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Stripe</button>
-            <button onClick={() => setSourceFilter('manual')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'manual' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Manuales</button>
-            <button onClick={() => setSourceFilter('attention')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'attention' ? 'bg-rose-100 shadow-sm text-rose-700' : 'text-gray-500 hover:text-rose-600'}`}>⚠️ Atención</button>
+          <div className="flex bg-gray-100 p-1 rounded-lg w-full sm:w-auto overflow-x-auto">
+            <button onClick={() => setSourceFilter('all')} className={`flex-1 sm:flex-none whitespace-nowrap px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'all' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Todos</button>
+            <button onClick={() => setSourceFilter('stripe')} className={`flex-1 sm:flex-none whitespace-nowrap px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'stripe' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Stripe</button>
+            <button onClick={() => setSourceFilter('manual')} className={`flex-1 sm:flex-none whitespace-nowrap px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'manual' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Manuales</button>
+            <button onClick={() => setSourceFilter('attention')} className={`flex-1 sm:flex-none whitespace-nowrap px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'attention' ? 'bg-rose-100 shadow-sm text-rose-700' : 'text-gray-500 hover:text-rose-600'}`}>⚠️ Vencidos/Impagos</button>
+            <button onClick={() => setSourceFilter('early_cancel')} className={`flex-1 sm:flex-none whitespace-nowrap px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sourceFilter === 'early_cancel' ? 'bg-amber-100 shadow-sm text-amber-700' : 'text-gray-500 hover:text-amber-600'}`}><UserMinus size={14} className="inline mr-1 -mt-0.5" />Fuga (Cancelan)</button>
           </div>
 
           <div className="relative w-full sm:w-72">
