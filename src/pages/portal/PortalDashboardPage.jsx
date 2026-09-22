@@ -6,7 +6,7 @@ import { Loader2, FileText, Download, ExternalLink, CheckCircle2, AlertCircle, C
 export default function PortalDashboardPage() {
   const { session } = useAuth();
   const clientEmail = session?.user?.email;
-  const [subscription, setSubscription] = useState(null);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
@@ -19,17 +19,18 @@ export default function PortalDashboardPage() {
   async function fetchData() {
     setLoading(true);
 
-    // 1. Obtener datos de suscripción
+    // 1. Obtener datos de todas las suscripciones
     const { data: subData } = await supabase
       .from('subscriptions')
       .select('*')
       .eq('client_email', clientEmail)
-      .maybeSingle();
+      .order('created_at', { ascending: false });
 
-    setSubscription(subData);
+    setSubscriptions(subData || []);
 
-    // 2. Si es Stripe, obtener facturas
-    if (subData?.source === 'stripe') {
+    // 2. Si alguna es Stripe, obtener facturas globales
+    const hasStripe = subData?.some(s => s.source === 'stripe');
+    if (hasStripe) {
       setLoadingInvoices(true);
       try {
         const { data: invData } = await supabase.functions.invoke('stripe-invoices', {
@@ -55,7 +56,7 @@ export default function PortalDashboardPage() {
     );
   }
 
-  if (!subscription) {
+  if (!subscriptions || subscriptions.length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
         <AlertCircle size={48} className="text-gray-300 mx-auto mb-4" />
@@ -66,82 +67,91 @@ export default function PortalDashboardPage() {
     );
   }
 
-  const isActive = subscription.status === 'active' && !subscription.cancel_at_period_end;
-  const isCanceling = subscription.cancel_at_period_end;
   const cycleLabels = { monthly: 'Mensual', quadrimester: 'Cuatrimestral', semester: 'Semestral', annual: 'Anual' };
+  const clientName = subscriptions[0]?.client_name;
+  const hasStripeSubs = subscriptions.some(s => s.source === 'stripe');
+  const manualInvoices = subscriptions.filter(s => s.invoice_url);
 
   return (
     <div className="space-y-8">
-
       {/* Encabezado */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Hola, {subscription.client_name} 👋</h1>
-        <p className="text-sm text-gray-500 mt-1">Aquí puedes consultar tu suscripción y descargar tus facturas.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Hola, {clientName} 👋</h1>
+        <p className="text-sm text-gray-500 mt-1">Aquí puedes consultar tus servicios y descargar tus facturas.</p>
       </div>
 
-      {/* Tarjeta de Suscripción */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-500 px-6 py-5 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-indigo-100 text-xs font-medium uppercase tracking-wider">Tu suscripción</p>
-              <h2 className="text-xl font-bold mt-1">{subscription.plan_name}</h2>
-            </div>
-            <div className="text-right">
-              <p className="text-3xl font-black">{Number(subscription.amount).toFixed(2)}€</p>
-              <p className="text-indigo-200 text-xs">/{cycleLabels[subscription.billing_cycle] || subscription.billing_cycle}</p>
-            </div>
-          </div>
-        </div>
+      {/* Lista de Suscripciones */}
+      <div className="space-y-6">
+        {subscriptions.map((sub) => {
+          const isActive = sub.status === 'active' && !sub.cancel_at_period_end;
+          const isCanceling = sub.cancel_at_period_end;
+          
+          return (
+            <div key={sub.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-500 px-6 py-5 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-indigo-100 text-xs font-medium uppercase tracking-wider">Tu suscripción</p>
+                    <h2 className="text-xl font-bold mt-1">{sub.plan_name}</h2>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-black">{Number(sub.amount).toFixed(2)}€</p>
+                    <p className="text-indigo-200 text-xs">/{cycleLabels[sub.billing_cycle] || sub.billing_cycle}</p>
+                  </div>
+                </div>
+              </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
-          {/* Estado */}
-          <div className="px-6 py-4">
-            <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
-              <CheckCircle2 size={14} />
-              Estado
-            </div>
-            {isActive ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                <CheckCircle2 size={12} /> Activa
-              </span>
-            ) : isCanceling ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">
-                <AlertCircle size={12} /> Cancelación pendiente
-              </span>
-            ) : subscription.status === 'past_due' ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">
-                <AlertCircle size={12} /> Pago pendiente
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">
-                Cancelada
-              </span>
-            )}
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+                {/* Estado */}
+                <div className="px-6 py-4">
+                  <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
+                    <CheckCircle2 size={14} />
+                    Estado
+                  </div>
+                  {isActive ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                      <CheckCircle2 size={12} /> Activa
+                    </span>
+                  ) : isCanceling ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">
+                      <AlertCircle size={12} /> Cancelación pendiente
+                    </span>
+                  ) : sub.status === 'past_due' ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                      <AlertCircle size={12} /> Pago pendiente
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                      Cancelada
+                    </span>
+                  )}
+                </div>
 
-          {/* Ciclo */}
-          <div className="px-6 py-4">
-            <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
-              <Clock size={14} />
-              Ciclo de facturación
-            </div>
-            <p className="text-sm font-semibold text-gray-900">{cycleLabels[subscription.billing_cycle] || 'Mensual'}</p>
-          </div>
+                {/* Ciclo */}
+                <div className="px-6 py-4">
+                  <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
+                    <Clock size={14} />
+                    Ciclo de facturación
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900">{cycleLabels[sub.billing_cycle] || 'Mensual'}</p>
+                </div>
 
-          {/* Próximo cobro */}
-          <div className="px-6 py-4">
-            <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
-              <Calendar size={14} />
-              Próximo cobro
+                {/* Próximo cobro */}
+                <div className="px-6 py-4">
+                  <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
+                    <Calendar size={14} />
+                    Próximo cobro
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {sub.next_billing_date
+                      ? new Date(sub.next_billing_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+                      : '—'}
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="text-sm font-semibold text-gray-900">
-              {subscription.next_billing_date
-                ? new Date(subscription.next_billing_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
-                : '—'}
-            </p>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {/* Facturas */}
@@ -151,15 +161,15 @@ export default function PortalDashboardPage() {
           <h3 className="font-bold text-gray-900">Historial de Facturas</h3>
         </div>
 
-        {/* Factura manual adjunta */}
-        {subscription.invoice_url && (
-          <div className="px-6 py-3 bg-indigo-50/50 border-b border-indigo-100 flex items-center justify-between">
+        {/* Facturas manuales adjuntas */}
+        {manualInvoices.map((sub, idx) => (
+          <div key={`manual-${idx}`} className="px-6 py-3 bg-indigo-50/50 border-b border-indigo-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText size={16} className="text-indigo-600" />
-              <span className="text-sm font-medium text-indigo-800">Factura adjunta por Vestra</span>
+              <span className="text-sm font-medium text-indigo-800">Factura adjunta: {sub.plan_name}</span>
             </div>
             <a
-              href={subscription.invoice_url}
+              href={sub.invoice_url}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 px-3 py-1.5 bg-indigo-100 rounded-lg hover:bg-indigo-200 transition-colors"
@@ -167,10 +177,10 @@ export default function PortalDashboardPage() {
               <Download size={14} /> Descargar
             </a>
           </div>
-        )}
+        ))}
 
         {/* Facturas de Stripe */}
-        {subscription.source === 'stripe' && (
+        {hasStripeSubs && (
           loadingInvoices ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 size={24} className="animate-spin text-indigo-400" />
@@ -227,8 +237,8 @@ export default function PortalDashboardPage() {
           )
         )}
 
-        {/* Sin facturas de Stripe para manual */}
-        {subscription.source !== 'stripe' && !subscription.invoice_url && (
+        {/* Mensaje vacío si no hay facturas de ningún tipo */}
+        {!hasStripeSubs && manualInvoices.length === 0 && (
           <div className="py-12 text-center">
             <FileText size={32} className="text-gray-200 mx-auto mb-3" />
             <p className="text-sm text-gray-400">Aún no hay facturas disponibles.</p>
