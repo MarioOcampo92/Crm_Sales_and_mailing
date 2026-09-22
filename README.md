@@ -1,83 +1,79 @@
-# Vestra CRM - Módulo de Gestión y Suscripciones
+# Vestra CRM y Portal de Clientes
 
-Desarrollado por **Vestra Solutions LLC**.
+Sistema integral de gestion de ventas, control de facturacion y portal de auto-servicio para clientes.
 
-## Descripción General
-Vestra CRM es un sistema centralizado diseñado para la gestión de clientes, leads (pipeline de ventas) y un potente motor de suscripciones recurrentes. El sistema automatiza la facturación y seguimiento tanto de pagos manuales como de cobros automáticos sincronizados en tiempo real con Stripe.
+## Mapa Conceptual de Arquitectura
 
----
+```mermaid
+flowchart TD
+    Client[Navegador del Usuario] --> Router{React Router}
+    
+    Router -->|/ (Rutas CRM)| Admin[Admin CRM]
+    Router -->|/portal/*| Portal[Portal de Clientes]
 
-## 🗺️ Mapa Conceptual de Funcionamiento
+    subgraph Backend [Supabase Cloud]
+        DB[(PostgreSQL)]
+        Auth[Supabase Auth]
+        RLS{Row Level Security}
+    end
 
-```text
-+---------------------+       +------------------------+       +-------------------------+
-|   CLIENTE (PAGA)    |       |       STRIPE           |       |      VESTRA CRM         |
-|                     | ----> | (Procesa tarjeta,      | ----> | (Dashboard, Pipelines,  |
-| 1. Automático (Web) |       |  emite factura,        |       |  Suscripciones)         |
-| 2. Manual (SEO/Mto) |       |  gestiona reintentos)  |       |                         |
-+---------------------+       +------------------------+       +-------------------------+
-                                        |                               ^
-                                        | Webhooks (Edge Functions)     |
-                                        v                               |
-                              +------------------------+                |
-                              | SUPABASE (Backend)     |                |
-                              | - Base de Datos SQL    |                |
-                              | - Edge Functions (API) |----------------+
-                              | - Autenticación        |
-                              +------------------------+
+    Admin -->|Acceso Privilegiado| DB
+    Portal -->|Magic Link| Auth
+    Auth --> RLS
+    RLS -->|Restringido por Email| DB
+
+    subgraph Integraciones Externas
+        Stripe[Stripe API]
+        Resend[Resend SMTP]
+    end
+
+    subgraph Deno Edge Functions
+        Webhooks[stripe-webhook]
+        Invoices[stripe-invoices]
+        ValidateEmail[validate-portal-email]
+        Sync[sync-history]
+    end
+
+    DB -.->|Cron: Recordatorios 30 dias| Resend
+    Stripe -.->|Eventos de Pago| Webhooks
+    Webhooks -.-> DB
+    Portal -.-> ValidateEmail
+    Portal -.-> Invoices
+    Invoices -.-> Stripe
 ```
 
-### Flujo de Datos
-1. **Cobros Automáticos (Stripe):** Cuando un cliente paga o se renueva su suscripción en Stripe, Stripe dispara un Webhook. Este webhook es recibido por nuestras Edge Functions en Supabase, procesado, y el estado del cliente se actualiza automáticamente en el CRM (estado, monto, ciclo, fecha de próximo cobro, teléfono).
-2. **Cobros Manuales:** Gestionados directamente en la interfaz del CRM. El administrador programa la fecha y ciclo. El sistema calcula inteligentemente las proyecciones y levanta alertas visuales cuando un pago está vencido.
+## Modulos Principales
+
+### CRM Interno (Administracion)
+- Autenticacion estandar para administradores y equipo de ventas.
+- Dashboard de metricas financieras (MRR activo, estimaciones manuales, tasa de fuga y cobros pendientes).
+- Kanban interactivo para seguimiento de embudo de ventas y prospectos.
+- Directorio de clientes centralizado.
+- Gestion de suscripciones hibrida (Sincronizacion bidireccional con Stripe y control manual para transferencias bancarias).
+- Sistema de Mailing masivo integrado con el servidor SMTP.
+
+### Portal de Clientes
+- Acceso sin contrasenas (Passwordless) mediante Magic Links.
+- Validacion de seguridad en el backend para emitir accesos unicamente a correos con servicios activos.
+- Panel de control aislado por cliente.
+- Consulta del estado del servicio, fecha de renovacion e importes.
+- Descarga directa de facturas (generadas por Stripe) y recibos adjuntos manuales.
+
+## Tecnologias Utilizadas
+
+- Frontend: React 19, Vite, Tailwind CSS, React Router v7, Recharts.
+- Backend y Base de Datos: Supabase (PostgreSQL).
+- Autenticacion: GoTrue (Supabase Auth).
+- Funciones Serverless: Supabase Edge Functions (Deno Runtime).
+- Despliegue: Hostinger VPS (Frontend) y Supabase Cloud (Backend).
+- Integraciones: Stripe Billing, Resend SMTP.
+
+## Medidas de Seguridad Implementadas
+
+1. Row Level Security (RLS): Las consultas a la base de datos estan protegidas a nivel de fila en el nucleo de PostgreSQL. Un cliente logueado en el portal unicamente tiene permisos para extraer los registros donde el correo de su token JWT coincida exactamente con la columna de facturacion.
+2. Edge Functions: La validacion de correos del portal se ejecuta en entornos Deno cerrados, evitando exponer la lista de clientes al frontend publico.
+3. Magic Links: Autenticacion delegada, eliminando almacenamiento de contrasenas de clientes y bloqueando ataques de fuerza bruta.
+4. Cifrado de Secretos: Las claves API de Stripe y Resend residen exclusivamente en el Vault encriptado de Supabase.
 
 ---
-
-## ✨ Funcionalidades Principales
-
-### 1. Panel de Suscripciones Híbrido
-- **Sincronización Stripe:** Lectura en tiempo real de clientes automáticos. Evita duplicidad y sobrescritura.
-- **Cobros Manuales:** Gestión de servicios que se cobran por transferencia o métodos externos (Mantenimientos SEO, etc.).
-- **Ciclos Dinámicos:** Soporte para suscripciones Mensuales, 4 Meses (Cuatrimestrales), 6 Meses (Semestrales) y Anuales.
-
-### 2. Motor de Proyecciones (Forecasting)
-- **Stripe (Mes):** Cálculo del MRR (Monthly Recurring Revenue) normalizado de suscripciones automáticas.
-- **Estimado Manual:** Cálculo del ARR (Anual) de todos los cobros manuales.
-- **Calendario Desplegable:** Sistema dinámico que agrupa los próximos cobros manuales por mes/año, listando los clientes exactos que deben ser contactados y el monto estimado en juego.
-
-### 3. Alertas y Automatización
-- **Filtro de Atención (⚠️):** Muestra de inmediato clientes de Stripe cuyo cobro falló (Impago/Cancelado) y clientes manuales cuya fecha de pago ya expiró.
-- **Renovación a Un Clic:** Botón de confirmación rápida que suma automáticamente el ciclo correspondiente a la fecha de cobro de clientes manuales.
-- **Historial de Facturas:** Integración directa con la API de Stripe para descargar las últimas facturas pagadas en PDF sin salir del CRM.
-
-### 4. Pipeline de Ventas (Kanban)
-- Gestión de leads por etapas (Contacto, Negociación, Cierre).
-- Notas, recordatorios y trazabilidad comercial.
-
----
-
-## 🛠️ Stack Tecnológico
-
-**Frontend (Interfaz de Usuario)**
-- React.js + Vite
-- Tailwind CSS (Estilos y Diseño UI/UX)
-- Lucide React (Iconografía)
-- React Hot Toast (Notificaciones)
-
-**Backend & Base de Datos**
-- Supabase (PostgreSQL)
-- Supabase Edge Functions (Deno / TypeScript) para Webhooks e integración API.
-
-**Integraciones de Terceros**
-- Stripe API (Billing, Subscriptions, Invoices, Webhooks).
-- Hostinger (Despliegue y Hosting del Frontend).
-
----
-
-## 🔒 Seguridad y Buenas Prácticas
-- Las claves privadas de Stripe (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) residen cifradas exclusivamente en los *Secrets* del servidor de Supabase.
-- Configuración de exclusiones de Git (`.gitignore`) para credenciales de despliegue (`_deploy.js`) y variables de entorno (`.env`).
-- Restricción de edición de registros automáticos en frontend para mantener a Stripe como *Single Source of Truth*.
-
----
-*© 2026 Vestra Solutions LLC. Todos los derechos reservados.*
+Desarrollado y mantenido de forma exclusiva por Vestra Solutions LLC.
