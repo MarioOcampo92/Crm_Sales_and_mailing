@@ -33,7 +33,7 @@ function PortalRoutes() {
   return (
     <PortalLayout>
       <Routes>
-        <Route path="/" element={<PortalDashboardPage />} />
+        <Route path="/portal" element={<PortalDashboardPage />} />
         <Route path="*" element={<Navigate to="/portal" replace />} />
       </Routes>
     </PortalLayout>
