@@ -40,8 +40,8 @@ export default function KanbanPage() {
     for (const [status, list] of Object.entries(columns)) {
       filtered[status] = list.filter(
         (l) => 
-          (l.nombre || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q) || 
-          (l.zona || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q)
+          String(l.nombre || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q) || 
+          String(l.zona || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q)
       );
     }
     return filtered;

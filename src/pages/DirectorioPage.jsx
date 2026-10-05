@@ -35,9 +35,9 @@ export default function DirectorioPage() {
     if (search.trim()) {
       const q = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       rows = rows.filter((l) =>
-        (l.nombre || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q) ||
-        (l.zona || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q) ||
-        (l.telefono || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q)
+        String(l.nombre || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q) ||
+        String(l.zona || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q) ||
+        String(l.telefono || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q)
       );
     }
     if (oportunidadFilter !== 'all') rows = rows.filter((l) => l.oportunidad === oportunidadFilter);
