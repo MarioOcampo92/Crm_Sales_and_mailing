@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback } from 'react';
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
-import { Search, Loader2, AlertTriangle, UserPlus } from 'lucide-react';
+import { Search, Loader2, AlertTriangle, UserPlus, Compass } from 'lucide-react';
 import { PIPELINE_COLUMNS } from '../data/mockLeads';
 import { useLeads, classifyOpportunity } from '../hooks/useLeads';
 import KanbanColumn from '../components/kanban/KanbanColumn';
 import LeadDetailModal from '../components/kanban/LeadDetailModal';
 import NewLeadModal from '../components/kanban/NewLeadModal';
+import RoutePlannerModal from '../components/kanban/RoutePlannerModal';
 import NichoFilter from '../components/NichoFilter';
 
 function groupByStatus(leads) {
@@ -13,7 +14,9 @@ function groupByStatus(leads) {
   for (const col of PIPELINE_COLUMNS) grouped[col.id] = [];
   for (const lead of leads) {
     const enriched = { ...lead, oportunidad: classifyOpportunity(lead.tiene_web, lead.website_url) };
-    if (grouped[lead.status]) grouped[lead.status].push(enriched);
+    const rawStatus = lead.status ? String(lead.status).trim().toLowerCase() : 'nuevo';
+    const status = grouped[rawStatus] ? rawStatus : 'nuevo';
+    grouped[status].push(enriched);
   }
   return grouped;
 }
@@ -25,13 +28,19 @@ export default function KanbanPage() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [localOverrides, setLocalOverrides] = useState({});
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
+  const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
 
   const effectiveLeads = useMemo(() =>
     leads.map((l) => localOverrides[l.id] ? { ...l, status: localOverrides[l.id] } : l),
     [leads, localOverrides]
   );
 
-  const columns = useMemo(() => groupByStatus(effectiveLeads), [effectiveLeads]);
+  const columns = useMemo(() => {
+    const cols = groupByStatus(effectiveLeads);
+    const breakdown = Object.fromEntries(Object.entries(cols).map(([k, v]) => [k, v.length]));
+    console.log('[Kanban] Total leads recibidos en Pipeline:', effectiveLeads.length, 'Desglose por columnas:', breakdown);
+    return cols;
+  }, [effectiveLeads]);
 
   const filteredColumns = useMemo(() => {
     if (!search.trim()) return columns;
@@ -116,6 +125,14 @@ export default function KanbanPage() {
               />
             </div>
             <button
+              onClick={() => setIsRouteModalOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors flex-shrink-0 shadow-sm"
+              title="Crear ruta a pie de visitas para Google Maps"
+            >
+              <Compass size={16} />
+              Planificar Ruta
+            </button>
+            <button
               onClick={() => setIsNewLeadModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0"
             >
@@ -172,6 +189,14 @@ export default function KanbanPage() {
             // Se sincroniza solo por realtime, o abrimos el modal del nuevo lead:
             setSelectedLead(newLead);
           }}
+        />
+      )}
+
+      {isRouteModalOpen && (
+        <RoutePlannerModal
+          leads={effectiveLeads}
+          onClose={() => setIsRouteModalOpen(false)}
+          onLeadStatusChange={handleStatusChange}
         />
       )}
     </div>

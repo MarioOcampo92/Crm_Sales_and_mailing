@@ -42,7 +42,7 @@ export default function KanbanColumn({ column, leads, provided, isDraggingOver, 
         className="flex-1 overflow-y-auto px-3 pb-3 space-y-2 min-h-[100px]"
       >
         {leads.map((lead, index) => (
-          <Draggable key={lead.id} draggableId={lead.id} index={index}>
+          <Draggable key={String(lead.id)} draggableId={String(lead.id)} index={index}>
             {(dragProvided, dragSnapshot) => (
               <KanbanCard
                 lead={lead}

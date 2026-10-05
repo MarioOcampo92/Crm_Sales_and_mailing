@@ -21,28 +21,47 @@ export function useLeads(nichoFilter = 'all') {
   const [nichos, setNichos]   = useState([]);
 
   const fetchLeads = useCallback(async () => {
-    setLoading(true);
-
+    console.log('[useLeads] Cargando leads desde Supabase...');
     const { data: allData, error: allErr } = await supabase
       .from('leads')
       .select('*')
       .order('created_at', { ascending: true });
 
     if (allErr) {
+      console.error('[useLeads] Error al obtener leads:', allErr);
       setError(allErr.message);
       setLeads([]);
       setLoading(false);
       return;
     }
 
-    const allLeads = allData || [];
+    console.log('[useLeads] Leads totales recibidos de Supabase:', allData?.length);
+
+    const allLeads = (allData || []).map((l) => ({
+      ...l,
+      status: l.status ? String(l.status).toLowerCase().trim() : 'nuevo',
+      nicho: l.nicho || 'Estéticas',
+    }));
+
+    // Auto-reparar en base de datos si había registros sin status o nicho
+    if ((allData || []).some((l) => !l.status)) {
+      console.log('[useLeads] Auto-reparando leads con status nulo...');
+      supabase.from('leads').update({ status: 'nuevo' }).is('status', null).then();
+    }
+    if ((allData || []).some((l) => !l.nicho)) {
+      console.log('[useLeads] Auto-reparando leads con nicho nulo...');
+      supabase.from('leads').update({ nicho: 'Estéticas' }).is('nicho', null).then();
+    }
+
     const uniqueNichos = [...new Set(allLeads.map((l) => l.nicho).filter(Boolean))].sort();
+    console.log('[useLeads] Nichos disponibles:', uniqueNichos);
     setNichos(uniqueNichos);
 
     const filtered = nichoFilter === 'all'
       ? allLeads
       : allLeads.filter((l) => l.nicho === nichoFilter);
 
+    console.log(`[useLeads] Leads filtrados para filtro "${nichoFilter}":`, filtered.length);
     setLeads(filtered);
     setError(null);
     setLoading(false);
@@ -62,7 +81,11 @@ export function useLeads(nichoFilter = 'all') {
         { event: '*', schema: 'public', table: 'leads' },
         (payload) => {
           if (payload.eventType === 'UPDATE') {
-            const updated = payload.new;
+            const updated = {
+              ...payload.new,
+              status: payload.new.status ? String(payload.new.status).toLowerCase().trim() : 'nuevo',
+              nicho: payload.new.nicho || 'Estéticas',
+            };
             // Si cambia el nicho y no encaja con el filtro actual, quitarlo de la lista
             setLeads((prev) => {
               const exists = prev.some((l) => l.id === updated.id);
@@ -77,7 +100,11 @@ export function useLeads(nichoFilter = 'all') {
               return [...prev, updated];
             });
           } else if (payload.eventType === 'INSERT') {
-            const inserted = payload.new;
+            const inserted = {
+              ...payload.new,
+              status: payload.new.status ? String(payload.new.status).toLowerCase().trim() : 'nuevo',
+              nicho: payload.new.nicho || 'Estéticas',
+            };
             if (nichoFilter === 'all' || inserted.nicho === nichoFilter) {
               setLeads((prev) => {
                 if (prev.some((l) => l.id === inserted.id)) return prev; // evitar duplicados

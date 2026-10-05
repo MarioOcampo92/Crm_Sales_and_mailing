@@ -50,7 +50,7 @@ export default function DashboardPage() {
           <h2 className="text-base font-semibold text-gray-800 mb-3">Pipeline</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {PIPELINE_COLUMNS.map((col) => {
-              const count = enriched.filter((l) => l.status === col.id).length;
+              const count = enriched.filter((l) => (l.status ? String(l.status).toLowerCase().trim() : 'nuevo') === col.id).length;
               return (
                 <div key={col.id} className="bg-white border border-gray-200 rounded-xl p-4 text-center">
                   <span className="text-xl">{col.emoji}</span>

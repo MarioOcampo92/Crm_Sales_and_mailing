@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Search, ExternalLink, Flame, Phone, Globe, MapPin, SlidersHorizontal, X, UserPlus } from 'lucide-react';
+import { Search, ExternalLink, Flame, Phone, Globe, MapPin, SlidersHorizontal, X, UserPlus, Compass } from 'lucide-react';
 import { useLeads, classifyOpportunity } from '../hooks/useLeads';
 import { PIPELINE_COLUMNS } from '../data/mockLeads';
 import { getVendedor } from '../data/vendedores';
 import NichoFilter from '../components/NichoFilter';
 import LeadDetailModal from '../components/kanban/LeadDetailModal';
 import NewLeadModal from '../components/kanban/NewLeadModal';
+import RoutePlannerModal from '../components/kanban/RoutePlannerModal';
 
 const STATUS_STYLES = {
   nuevo:      'bg-blue-100 text-blue-700',
@@ -24,6 +25,7 @@ export default function DirectorioPage() {
   const [selectedLead, setSelectedLead]         = useState(null);
   const [showFilters, setShowFilters]           = useState(false);
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
+  const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
 
   const enriched = useMemo(() =>
     leads.map((l) => ({ ...l, oportunidad: classifyOpportunity(l.tiene_web, l.website_url) })),
@@ -59,13 +61,23 @@ export default function DirectorioPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Directorio de Leads</h1>
           <p className="text-sm text-gray-500">Vista completa de todos los leads importados</p>
         </div>
-        <button
-          onClick={() => setIsNewLeadModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <UserPlus size={16} />
-          Nuevo Lead
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsRouteModalOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+            title="Crear ruta a pie de visitas para Google Maps"
+          >
+            <Compass size={16} />
+            Planificar Ruta
+          </button>
+          <button
+            onClick={() => setIsNewLeadModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <UserPlus size={16} />
+            Nuevo Lead
+          </button>
+        </div>
       </div>
 
       {/* Nicho pills */}
@@ -274,6 +286,14 @@ export default function DirectorioPage() {
           onLeadCreated={(newLead) => {
             setSelectedLead(newLead);
           }}
+        />
+      )}
+
+      {isRouteModalOpen && (
+        <RoutePlannerModal
+          leads={filtered}
+          onClose={() => setIsRouteModalOpen(false)}
+          onLeadStatusChange={handleStatusChange}
         />
       )}
     </div>

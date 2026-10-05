@@ -134,14 +134,33 @@ export default function ImportPage() {
     setImporting(true);
     setResult(null);
 
-    const { data, error } = await supabase.from('leads').insert(toImport).select();
+    console.log('[Import] Comenzando importación de', toImport.length, 'leads con nicho:', nichoFinal);
+
+    // Insertar en lotes de 100 para evitar problemas de payload grande
+    const batchSize = 100;
+    let totalInserted = 0;
+    let importError = null;
+
+    for (let i = 0; i < toImport.length; i += batchSize) {
+      const batch = toImport.slice(i, i + batchSize);
+      console.log(`[Import] Subiendo lote ${Math.floor(i / batchSize) + 1} (${batch.length} leads)...`);
+      const { data, error } = await supabase.from('leads').insert(batch).select();
+      if (error) {
+        console.error('[Import] Error al subir lote:', error);
+        importError = error;
+        break;
+      }
+      totalInserted += (data?.length || 0);
+    }
 
     setImporting(false);
 
-    if (error) {
-      setResult({ type: 'error', message: error.message });
+    if (importError) {
+      console.error('[Import] Error final de importación:', importError.message);
+      setResult({ type: 'error', message: importError.message });
     } else {
-      setResult({ type: 'success', count: data.length, nicho: nichoFinal });
+      console.log('[Import] ¡Importación exitosa! Total leads importados:', totalInserted);
+      setResult({ type: 'success', count: totalInserted, nicho: nichoFinal });
       setParsedRows([]);
       setFileName('');
     }
