@@ -33,11 +33,11 @@ export default function DirectorioPage() {
   const filtered = useMemo(() => {
     let rows = enriched;
     if (search.trim()) {
-      const q = search.toLowerCase();
+      const q = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       rows = rows.filter((l) =>
-        l.nombre.toLowerCase().includes(q) ||
-        l.zona.toLowerCase().includes(q) ||
-        l.telefono.toLowerCase().includes(q)
+        (l.nombre || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q) ||
+        (l.zona || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q) ||
+        (l.telefono || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q)
       );
     }
     if (oportunidadFilter !== 'all') rows = rows.filter((l) => l.oportunidad === oportunidadFilter);

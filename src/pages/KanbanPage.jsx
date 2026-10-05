@@ -35,11 +35,13 @@ export default function KanbanPage() {
 
   const filteredColumns = useMemo(() => {
     if (!search.trim()) return columns;
-    const q = search.toLowerCase();
+    const q = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const filtered = {};
     for (const [status, list] of Object.entries(columns)) {
       filtered[status] = list.filter(
-        (l) => l.nombre.toLowerCase().includes(q) || l.zona.toLowerCase().includes(q)
+        (l) => 
+          (l.nombre || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q) || 
+          (l.zona || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q)
       );
     }
     return filtered;
